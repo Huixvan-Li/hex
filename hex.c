@@ -21,12 +21,12 @@
 #define BUFFER_SIZE 1024
 
 /* 返回码定义 */
-enum{ SUCCESS, ARGS_ERROR, HANDLE_ERROR } EXITCODE;
+static enum{ SUCCESS, ARGS_ERROR, HANDLE_ERROR } EXITCODE;
 
 /* 错误信息与帮助信息 */
-char ARG_ERROR_INFO[] =
+static char ARG_ERROR_INFO[] =
 "ERROR! Couldn't recognize argument %s, please use option \"--help\" for instructions\n";
-char HELP_INFO[] =
+static char HELP_INFO[] =
 "The program can read a file or input stream and output its hexadecimal value to other file or standrad output, \"-b\" option set the read mode to binary, as follows: \n"
 "\t<command> | bytes [-b] [-o <outputfile>]\n"
 "\t<inputfile> > bytes [-b] [-o <outputfile>]\n"
@@ -35,31 +35,31 @@ char HELP_INFO[] =
 "\tbytes [-b] [-o <outputfile>]\n";
 
 /* 缓冲区 */
-char OUTPUT_FILE_BUFFER[BUFFER_SIZE];
+static char OUTPUT_FILE_BUFFER[BUFFER_SIZE];
 
 /* 全局参数 */
-struct mode{
+static struct mode{
     bool if_binary;
     bool if_stdin_redirect;
     bool if_stdout_redirect;
 } mode = { false,false };
 
-char *input_file_path = NULL;
-char *output_file_path = NULL;
-FILE *input_file_stream;
-FILE *output_file_stream;
+static char *input_file_path = NULL;
+static char *output_file_path = NULL;
+static FILE *input_file_stream;
+static FILE *output_file_stream;
 
 /* 读取参数并根据参数修改全局参数 */
-void analyze_arguments(int argc, char **argv);
+static void analyze_arguments(int argc, char **argv);
 
 /* 根据全局参数设置输入流 */
-void set_input_stream(void);
+static void set_input_stream(void);
 
 /* 根据全局参数设置输出流 */
-void set_output_stream(void);
+static void set_output_stream(void);
 
 /* 进行转化输出 */
-void transform(void);
+static void transform(void);
 
 /* 主函数 */
 int main(int argc, char *argv[]){
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]){
 
 
 /* 读取参数并根据参数修改全局参数 */
-void analyze_arguments(int argc, char **argv){
+static void analyze_arguments(int argc, char **argv){
     // 对参数遍历处理
     for (int i = 1;i < argc;i++){
         char *p = argv[i];
@@ -89,12 +89,16 @@ void analyze_arguments(int argc, char **argv){
             }
             // -o选项
             else if (strcmp(p, "-o") == 0){
+                // 若outputfile已存在
+                if (output_file_path != NULL){
+                    fprintf(stderr, "Error! An outputfile %s is already given!\n", output_file_path);
+                    exit(EXITCODE = ARGS_ERROR);
+                }
                 // 若为参数末尾
                 if (i == argc - 1){
                     fprintf(stderr, "Error! Couldn't find outputfile in arguments!\n");
                     exit(EXITCODE = ARGS_ERROR);
                 }
-                // 若不为参数末尾
                 output_file_path = argv[++i];
             }
             // 未知选项
@@ -131,7 +135,7 @@ void analyze_arguments(int argc, char **argv){
 }
 
 /* 根据全局参数设置输入流 */
-void set_input_stream(void){
+static void set_input_stream(void){
     // 二进制模式下
     if (mode.if_binary){
         // 指定输入文件时
@@ -171,7 +175,7 @@ void set_input_stream(void){
 }
 
 /* 根据全局参数设置输出流 */
-void set_output_stream(void){
+static void set_output_stream(void){
     // 指定输出文件时
     if (output_file_path != NULL){
         output_file_stream = fopen(output_file_path, "w");
@@ -189,13 +193,14 @@ void set_output_stream(void){
     if (mode.if_stdin_redirect || input_file_path != NULL){
         if (setvbuf(output_file_stream, OUTPUT_FILE_BUFFER, _IOFBF, BUFFER_SIZE)){
             fprintf(stderr, "ERROR! Couldn't set buffer for output stream!\n");
+            fclose(output_file_stream);
             exit(EXITCODE = HANDLE_ERROR);
         }
     }
 }
 
 /* 进行转化输出 */
-void transform(void){
+static void transform(void){
     // 二进制模式
     if (mode.if_binary){
         bool line_begin = true;
